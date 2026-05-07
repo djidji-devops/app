@@ -12,7 +12,6 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Notifikacija kad je app zatvorena ili u pozadini
 messaging.onBackgroundMessage(payload => {
   self.registration.showNotification(
     payload.notification?.title || 'FRIGO-NIDŽA',
