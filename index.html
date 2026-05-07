@@ -162,13 +162,21 @@ async function getOAuthToken(){
 }
 async function sendPushToAll(title,body){
   try{
-    const snap=await db.collection('fcm_tokeni').get();if(snap.empty)return;
+    console.log('sendPushToAll pozvan:', title, body);
+    const snap=await db.collection('fcm_tokeni').get();
+    console.log('Tokeni u bazi:', snap.size);
+    if(snap.empty){console.log('Nema tokena!');return;}
+    console.log('Uzimam OAuth token...');
     const token=await getOAuthToken();
+    console.log('OAuth token dobijen:', token ? 'DA' : 'NE');
     for(const doc of snap.docs){
       const t=doc.data().token;if(!t)continue;
-      await fetch('https://fcm.googleapis.com/v1/projects/proba-9781f/messages:send',{method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({message:{token:t,notification:{title,body},android:{priority:'high',notification:{sound:'default',channel_id:'frigo_nalozi'}}}})});
+      console.log('Šaljem push za:', doc.id);
+      const res=await fetch('https://fcm.googleapis.com/v1/projects/proba-9781f/messages:send',{method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({message:{token:t,notification:{title,body},android:{priority:'high',notification:{sound:'default',channel_id:'frigo_nalozi'}}}})});
+      const json=await res.json();
+      console.log('FCM odgovor:', JSON.stringify(json));
     }
-  }catch(e){console.warn('Push greška:',e);}
+  }catch(e){console.error('Push greška:',e);}
 }
 async function initMessaging(radnik){
   if(!('Notification' in window)||!('serviceWorker' in navigator))return;
