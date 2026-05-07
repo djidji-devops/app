@@ -175,7 +175,7 @@ async function initMessaging(radnik){
   try{
     const perm=await Notification.requestPermission();
     if(perm!=='granted')return;
-    const reg=await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    const reg=await navigator.serviceWorker.register('/app/firebase-messaging-sw.js');
     const messaging=firebase.messaging();
     messaging.onMessage(payload=>{new Notification(payload.notification?.title||'FRIGO-NIDŽA',{body:payload.notification?.body,icon:'/logo.png'});});
     const t=await messaging.getToken({vapidKey:VAPID_KEY,serviceWorkerRegistration:reg});
