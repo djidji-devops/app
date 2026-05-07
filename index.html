@@ -187,7 +187,11 @@ async function initMessaging(radnik){
     const messaging=firebase.messaging();
     messaging.onMessage(payload=>{new Notification(payload.notification?.title||'FRIGO-NIDŽA',{body:payload.notification?.body,icon:'/logo.png'});});
     const t=await messaging.getToken({vapidKey:VAPID_KEY,serviceWorkerRegistration:reg});
-    if(t) await db.collection('fcm_tokeni').doc(radnik).set({token:t,radnik,ts:firebase.firestore.FieldValue.serverTimestamp()});
+    if(t){
+      // Sačuvaj token kao poseban dokument — ID je hash tokena da nema duplikata
+      const tokenId=btoa(t).replace(/[^a-zA-Z0-9]/g,'').substring(0,20);
+      await db.collection('fcm_tokeni').doc(tokenId).set({token:t,radnik,ts:firebase.firestore.FieldValue.serverTimestamp()});
+    }
   }catch(e){console.warn('Messaging init:',e);}
 }
 // ─────────────────────────────────────────────────────────────
