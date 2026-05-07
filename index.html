@@ -412,6 +412,9 @@ async function submitForma(){
   if(!forma.opis.trim()){toast('Upiši opis urađenog posla!');return;}
   saving=true; render();
   try{
+    // Auto-datum overe kad radnik zatvori nalog
+    const now=new Date();
+    forma.datumOvere=`${String(now.getDate()).padStart(2,'0')}.${String(now.getMonth()+1).padStart(2,'0')}.${now.getFullYear()}`;
     const slikeUrls=[], total=slikeB64.length+(forma.potpis?1:0); let done=0;
     const prog=()=>{ done++; const p=document.getElementById('prog');if(p)p.style.width=(done/Math.max(total,1)*100)+'%'; };
     for(let i=0;i<slikeB64.length;i++){ slikeUrls.push(await uploadImgBB(slikeB64[i])); prog(); }
@@ -493,7 +496,7 @@ function bind(){
   document.querySelectorAll('[data-modal]').forEach(el=>el.addEventListener('click',()=>openModal(el.dataset.modal)));
   document.querySelectorAll('[data-open]').forEach(el=>el.addEventListener('click',()=>{ aktivni=nalozi.find(n=>n.id===el.dataset.open); slikeB64=[];forma=ef();sigMS=false;render(); }));
   const bb=document.getElementById('btn-back'); if(bb)bb.addEventListener('click',()=>{ if(aktivni){aktivni=null;forma=ef();slikeB64=[];sigMS=false;}else{screen='login';role=null;} render(); });
-  ['musterija','pomocniRadnik','uredjaj','serijskiBroj','punoImeUredjaja','datumOvere','opis','adresa','napomena'].forEach(k=>{ const el=document.getElementById('f-'+k); if(el)el.addEventListener('input',()=>forma[k]=el.value); });
+  ['musterija','pomocniRadnik','uredjaj','serijskiBroj','punoImeUredjaja','opis','adresa','napomena'].forEach(k=>{ const el=document.getElementById('f-'+k); if(el)el.addEventListener('input',()=>forma[k]=el.value); });
   const chkRow=document.getElementById('chk-row'); if(chkRow)chkRow.addEventListener('click',()=>{ forma.zavrsen=!forma.zavrsen; const box=document.getElementById('chk-box'); if(box){box.style.background=forma.zavrsen?'#3fb950':'transparent';box.style.borderColor=forma.zavrsen?'#3fb950':'var(--border2)';box.textContent=forma.zavrsen?'✓':'';} chkRow.style.background=forma.zavrsen?'var(--green-bg)':'var(--card2)'; chkRow.style.borderColor=forma.zavrsen?'#3fb95044':'var(--border2)'; });
   const fi=document.getElementById('f-slike'); if(fi)fi.addEventListener('change',async e=>{ for(const f of Array.from(e.target.files)){ slikeB64.push(await resizeImg(f)); } renderSlikePreview(); });
   if(document.getElementById('sig-m-open')) initSig();
@@ -649,9 +652,7 @@ function rForma(){
       </div>
       <div class="card">
         <div class="sec" style="margin-top:0">Radnik popunjava</div>
-        <label class="lbl" style="margin-top:0">📅 Datum overe / predaje</label>
-        <input id="f-datumOvere" type="date" value="${forma.datumOvere}" style="border-color:var(--blue);background:#0c1f33">
-        <div class="divider"></div>
+
         <label class="lbl" style="margin-top:0">Ime i prezime mušterije</label>
         <input id="f-musterija" value="${forma.musterija}" placeholder="Ime i prezime...">
         <label class="lbl">Pomoćni radnik</label>
