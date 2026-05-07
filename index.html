@@ -23,7 +23,7 @@ textarea{resize:vertical}
 .header{color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px}
 .back-btn{background:none;border:none;color:#fff;cursor:pointer;font-size:20px;padding:0;line-height:1}
 .badge{font-size:12px;padding:2px 10px;border-radius:20px;display:inline-block;font-weight:500}
-.bg{background:#dcfce7;color:#15803d}.by{background:#fef9c3;color:#a16207}
+.bg{background:#dcfce7;color:#15803d}.by{background:#fef9c3;color:#a16207}.bn{background:#f1f5f9;color:#64748b}
 .sec{font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
 .divider{border-top:1px solid #f1f5f9;margin:16px 0}
 .wrap{max-width:600px;margin:0 auto;padding:1rem}
@@ -56,19 +56,18 @@ canvas{display:block;width:100%;height:130px}
 .info-label{color:#94a3b8;min-width:110px;flex-shrink:0}
 .empty{text-align:center;padding:2rem;color:#94a3b8;font-size:14px}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-
-/* Lightbox */
 .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;cursor:pointer}
 .lightbox img{max-width:100%;max-height:90vh;border-radius:10px;object-fit:contain;cursor:default}
 .lightbox-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-
-/* Modal detalji */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:900;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto}
 .modal{background:#fff;border-radius:16px;width:100%;max-width:600px;margin:auto;overflow:hidden}
 .modal-header{background:#185FA5;color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
 .modal-close{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;padding:0}
 .modal-body{padding:1rem 1.25rem}
 .modal-section{background:#f8fafc;border-radius:10px;padding:12px 14px;margin-bottom:12px;border:1px solid #f1f5f9}
+.assign-tag{font-size:11px;padding:2px 8px;border-radius:12px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;display:inline-block}
+.rn-id{font-family:'Courier New',monospace;font-weight:700;font-size:12px;color:#1d4ed8;background:#eff6ff;padding:3px 8px;border-radius:6px;letter-spacing:.03em}
+.loc-tag{font-size:11px;padding:2px 8px;border-radius:12px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;display:inline-block}
 </style>
 </head>
 <body>
@@ -100,63 +99,72 @@ let sefTab='novi', filterS='svi', pretraga='';
 let sigMS=false, drM=false;
 let forma=ef(), slikeB64=[];
 
-function ef(){ return{musterija:'',pomocniRadnik:'',uredjaj:'',serijskiBroj:'',punoImeUredjaja:'',datumMontaze:'',opis:'',adresa:'',napomena:'',potpis:null,zavrsen:false}; }
-function today(){ return new Date().toLocaleDateString('sr-RS'); }
-function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); }
+function ef(){
+  return{
+    musterija:'', pomocniRadnik:'', uredjaj:'', serijskiBroj:'',
+    punoImeUredjaja:'', datumOvere:'', opis:'', adresa:'',
+    napomena:'', potpis:null, zavrsen:false
+  };
+}
 
-// Lightbox
-function openLightbox(src){ const lb=document.getElementById('lightbox'); document.getElementById('lightbox-img').src=src; lb.style.display='flex'; document.body.style.overflow='hidden'; }
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); }
+function openLightbox(src){ document.getElementById('lightbox-img').src=src; document.getElementById('lightbox').style.display='flex'; document.body.style.overflow='hidden'; }
 function closeLightbox(){ document.getElementById('lightbox').style.display='none'; document.body.style.overflow=''; }
 
-// Modal detalji
+// ── Auto-generisanje imena naloga: RN:DD-MM-YYYY-N ──
+function genImeNaloga(){
+  const now=new Date();
+  const d=String(now.getDate()).padStart(2,'0');
+  const mo=String(now.getMonth()+1).padStart(2,'0');
+  const y=now.getFullYear();
+  const prefix=`RN:${d}-${mo}-${y}-`;
+  const todayCount=nalozi.filter(n=>(n.imeNaloga||'').startsWith(prefix)).length;
+  return prefix+(todayCount+1);
+}
+
 function openModal(nalogId){
   const n=nalozi.find(x=>x.id===nalogId); if(!n)return;
-  const rodg=(odgovori[n.dodeljen]||[]).filter(o=>o.nalogId===n.id);
+  const rodg=[];
+  Object.values(odgovori).forEach(arr=>arr.forEach(o=>{ if(o.nalogId===n.id)rodg.push(o); }));
+  rodg.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
   const mc=document.getElementById('modal-content');
   mc.innerHTML=`
     <div class="modal-header">
       <div>
-        <div style="font-weight:600;font-size:16px">${n.id} — ${n.imeNaloga||''}</div>
-        <div style="font-size:12px;opacity:.85">${n.dodeljen} · ${n.datumKreiranja||''}</div>
+        <div style="font-weight:700;font-size:15px;font-family:'Courier New',monospace;letter-spacing:.03em">${n.imeNaloga||n.id}</div>
+        <div style="font-size:12px;opacity:.85;margin-top:2px">${n.dodeljen?n.dodeljen:'Nije dodeljen'}${n.lokacija?' · 📍'+n.lokacija:''}</div>
       </div>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
       <div class="modal-section">
         <div class="sec">Podaci naloga</div>
-        <div class="info-row"><span class="info-label">Broj:</span><b>${n.id}</b></div>
-        <div class="info-row"><span class="info-label">Ime naloga:</span><span>${n.imeNaloga||'—'}</span></div>
-        <div class="info-row"><span class="info-label">Datum:</span><span>${n.datumKreiranja||'—'}</span></div>
-        <div class="info-row"><span class="info-label">Dodeljen:</span><span>${n.dodeljen}</span></div>
+        <div class="info-row"><span class="info-label">Broj naloga:</span><span class="rn-id">${n.imeNaloga||n.id}</span></div>
+        <div class="info-row"><span class="info-label">Dodeljen:</span><span>${n.dodeljen||'— Nije dodeljen —'}</span></div>
+        ${n.lokacija?`<div class="info-row"><span class="info-label">Lokacija:</span><span>📍 ${n.lokacija}</span></div>`:''}
         <div class="info-row"><span class="info-label">Status:</span><span class="badge ${n.status==='zavrsen'?'bg':'by'}">${n.status==='zavrsen'?'Završen':'Aktivan'}</span></div>
         <div class="info-row" style="margin-top:8px"><span class="info-label">Zahtev:</span><span>${n.zahtev}</span></div>
       </div>
       ${rodg.length===0?`<div class="empty" style="padding:1.5rem">Radnik još nije poslao izveštaj</div>`:
         rodg.map((o,i)=>`
         <div class="modal-section">
-          <div class="sec">Izveštaj ${rodg.length>1?i+1+'. ':''} — ${o.vreme}</div>
+          <div class="sec">Izveštaj ${rodg.length>1?i+1+'. ':''} — ${o.radnik||''} · ${o.vreme}</div>
+          ${o.datumOvere?`<div class="info-row"><span class="info-label">📅 Datum overe:</span><b>${o.datumOvere}</b></div>`:''}
           ${o.musterija?`<div class="info-row"><span class="info-label">Mušterija:</span><span>${o.musterija}</span></div>`:''}
           ${o.pomocniRadnik?`<div class="info-row"><span class="info-label">Pomoćni radnik:</span><span>${o.pomocniRadnik}</span></div>`:''}
           ${o.punoImeUredjaja?`<div class="info-row"><span class="info-label">Puno ime urđ.:</span><span>${o.punoImeUredjaja}</span></div>`:''}
           ${o.uredjaj?`<div class="info-row"><span class="info-label">Uređaj:</span><span>${o.uredjaj}</span></div>`:''}
           ${o.serijskiBroj?`<div class="info-row"><span class="info-label">Serijski broj:</span><span>${o.serijskiBroj}</span></div>`:''}
-          ${o.datumMontaze?`<div class="info-row"><span class="info-label">Datum montaže:</span><span>${o.datumMontaze}</span></div>`:''}
           ${o.opis?`<div class="info-row"><span class="info-label">Opis:</span><span>${o.opis}</span></div>`:''}
           ${o.adresa?`<div class="info-row"><span class="info-label">Adresa:</span><span>${o.adresa}</span></div>`:''}
           ${o.napomena?`<div class="info-row"><span class="info-label">Napomena:</span><span>${o.napomena}</span></div>`:''}
           <div class="info-row"><span class="info-label">Završen:</span><span>${o.zavrsen?'✅ Da':'⏳ Ne'}</span></div>
           ${o.slike&&o.slike.length?`
-            <div style="margin-top:10px">
-              <div class="sec" style="margin-bottom:6px">Slike (${o.slike.length})</div>
-              <div class="img-grid">
-                ${o.slike.map(u=>`<div class="img-thumb"><img src="${u}" onclick="openLightbox('${u}')"></div>`).join('')}
-              </div>
-            </div>`:''}
+            <div style="margin-top:10px"><div class="sec" style="margin-bottom:6px">Slike (${o.slike.length})</div>
+            <div class="img-grid">${o.slike.map(u=>`<div class="img-thumb"><img src="${u}" onclick="openLightbox('${u}')"></div>`).join('')}</div></div>`:''}
           ${o.potpis?`
-            <div style="margin-top:12px">
-              <div class="sec" style="margin-bottom:6px">Potpis mušterije</div>
-              <img src="${o.potpis}" onclick="openLightbox('${o.potpis}')" style="max-width:220px;height:65px;object-fit:contain;background:#fff;border:1px solid #e2e8f0;border-radius:8px;display:block;cursor:pointer">
-            </div>`:''}
+            <div style="margin-top:12px"><div class="sec" style="margin-bottom:6px">Potpis mušterije</div>
+            <img src="${o.potpis}" onclick="openLightbox('${o.potpis}')" style="max-width:220px;height:65px;object-fit:contain;background:#fff;border:1px solid #e2e8f0;border-radius:8px;display:block;cursor:pointer"></div>`:''}
         </div>`).join('')}
     </div>`;
   document.getElementById('modal-overlay').style.display='flex';
@@ -175,20 +183,26 @@ async function loadAll(){
 }
 
 async function kreirajNalog(){
-  const ime=document.getElementById('inp-ime').value.trim();
   const zahtev=document.getElementById('inp-zahtev').value.trim();
-  const datumKreiranja=document.getElementById('inp-datum').value;
+  const lokacija=document.getElementById('inp-lokacija').value.trim();
   const radnik=document.getElementById('inp-radnik').value;
-  if(!ime){toast('Upiši ime radnog naloga!');return;}
   if(!zahtev){toast('Upiši zahtev!');return;}
-  const id='NAL-'+String(nalozi.length+1).padStart(3,'0');
-  await db.collection('nalozi').doc(id).set({ imeNaloga:ime, zahtev, datumKreiranja:datumKreiranja||today(), dodeljen:radnik, status:'aktivan', createdAt:firebase.firestore.FieldValue.serverTimestamp() });
-  toast('Nalog kreiran ✓');
+
+  // Auto-generisanje imena
+  const imeNaloga=genImeNaloga();
+  const docId='nalog_'+Date.now();
+
+  await db.collection('nalozi').doc(docId).set({
+    imeNaloga, zahtev, lokacija,
+    dodeljen:radnik, status:'aktivan',
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  });
+  toast('Nalog '+imeNaloga+' kreiran ✓');
   await loadAll(); sefTab='nalozi'; render();
 }
 
 async function obrisiNalog(id){
-  if(!confirm('Obrisati nalog '+id+'?'))return;
+  if(!confirm('Obrisati ovaj nalog?'))return;
   await db.collection('nalozi').doc(id).delete();
   await loadAll(); render();
 }
@@ -204,7 +218,7 @@ function resizeImg(file){ return new Promise(res=>{ const rd=new FileReader(); r
 function initSig(){
   const cv=document.getElementById('cv-m'); if(!cv)return;
   const pos=e=>{ const r=cv.getBoundingClientRect(),s=e.touches?e.touches[0]:e; return{x:(s.clientX-r.left)*(cv.width/r.width),y:(s.clientY-r.top)*(cv.height/r.height)}; };
-  const start=e=>{ e.preventDefault(); const ctx=cv.getContext('2d'),{x,y}=pos(e); ctx.beginPath();ctx.moveTo(x,y);drM=true; document.getElementById('cv-m-ph')&&(document.getElementById('cv-m-ph').style.display='none'); };
+  const start=e=>{ e.preventDefault(); const ctx=cv.getContext('2d'),{x,y}=pos(e); ctx.beginPath();ctx.moveTo(x,y);drM=true; const ph=document.getElementById('cv-m-ph'); if(ph)ph.style.display='none'; };
   const move=e=>{ e.preventDefault(); if(!drM)return; const ctx=cv.getContext('2d'); ctx.lineWidth=2.5;ctx.lineCap='round';ctx.strokeStyle='#1e293b'; const{x,y}=pos(e); ctx.lineTo(x,y);ctx.stroke();cv.dataset.h='1'; };
   const end=e=>{ e.preventDefault();drM=false; };
   cv.addEventListener('mousedown',start);cv.addEventListener('mousemove',move);cv.addEventListener('mouseup',end);cv.addEventListener('mouseleave',end);
@@ -218,12 +232,22 @@ async function submitForma(){
   if(!forma.opis.trim()){toast('Upiši opis urađenog posla!');return;}
   saving=true; render();
   try{
-    const ts=Date.now(); const slikeUrls=[];
+    const slikeUrls=[];
     const total=slikeB64.length+(forma.potpis?1:0); let done=0;
     const prog=()=>{ done++; const p=document.getElementById('prog');if(p)p.style.width=(done/Math.max(total,1)*100)+'%'; };
     for(let i=0;i<slikeB64.length;i++){ slikeUrls.push(await uploadImgBB(slikeB64[i])); prog(); }
     let pmUrl=null; if(forma.potpis){ pmUrl=await uploadImgBB(forma.potpis); prog(); }
-    await db.collection('odgovori').add({ nalogId:aktivni.id, radnik:role, zahtev:aktivni.zahtev, musterija:forma.musterija, pomocniRadnik:forma.pomocniRadnik, uredjaj:forma.uredjaj, serijskiBroj:forma.serijskiBroj, punoImeUredjaja:forma.punoImeUredjaja, datumMontaze:forma.datumMontaze, opis:forma.opis, adresa:forma.adresa, napomena:forma.napomena, slike:slikeUrls, potpis:pmUrl, zavrsen:forma.zavrsen, vreme:new Date().toLocaleString('sr-RS'), createdAt:firebase.firestore.FieldValue.serverTimestamp() });
+    await db.collection('odgovori').add({
+      nalogId:aktivni.id, radnik:role, zahtev:aktivni.zahtev,
+      musterija:forma.musterija, pomocniRadnik:forma.pomocniRadnik,
+      uredjaj:forma.uredjaj, serijskiBroj:forma.serijskiBroj,
+      punoImeUredjaja:forma.punoImeUredjaja,
+      datumOvere:forma.datumOvere,
+      opis:forma.opis, adresa:forma.adresa, napomena:forma.napomena,
+      slike:slikeUrls, potpis:pmUrl, zavrsen:forma.zavrsen,
+      vreme:new Date().toLocaleString('sr-RS'),
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
     if(forma.zavrsen) await db.collection('nalozi').doc(aktivni.id).update({status:'zavrsen'});
     toast('Izveštaj poslat! ✓');
     aktivni=null; forma=ef(); slikeB64=[]; sigMS=false;
@@ -232,33 +256,30 @@ async function submitForma(){
   saving=false; render();
 }
 
-// ── Parcijalni re-render liste naloga (bez gubitka fokusa na pretrazi) ──
 function renderNaloziLista(){
-  const container = document.getElementById('nalozi-lista');
-  if(!container) return;
-  const prik = getFilteredNalozi();
-  container.innerHTML = prik.length===0
-    ? `<div class="empty">${pretraga?'Nema rezultata za "'+pretraga+'"':'Nema naloga'}</div>`
-    : prik.map(n=>{
-        const rodg=(odgovori[n.dodeljen]||[]).filter(o=>o.nalogId===n.id);
+  const container=document.getElementById('nalozi-lista'); if(!container)return;
+  const prik=getFilteredNalozi();
+  container.innerHTML=prik.length===0
+    ?`<div class="empty">${pretraga?'Nema rezultata za "'+pretraga+'"':'Nema naloga'}</div>`
+    :prik.map(n=>{
+        let rCnt=0; Object.values(odgovori).forEach(arr=>arr.forEach(o=>{ if(o.nalogId===n.id)rCnt++; }));
         return`<div class="card nalog-card" style="border-left:3px solid ${n.status==='zavrsen'?'#22c55e':'#f59e0b'};cursor:pointer" data-modal="${n.id}">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div style="display:flex;gap:8px;align-items:center">
-              <span style="font-weight:600;font-size:13px;color:#1d4ed8">${n.id}</span>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
+            <span class="rn-id">${n.imeNaloga||n.id}</span>
+            <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
               <span class="badge ${n.status==='zavrsen'?'bg':'by'}">${n.status==='zavrsen'?'Završen':'Aktivan'}</span>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <span style="font-size:12px;color:#64748b">${n.dodeljen}</span>
               <button class="btn btn-red" data-del="${n.id}">✕</button>
             </div>
           </div>
-          <div style="font-weight:600;font-size:14px;margin:8px 0 2px">${n.imeNaloga||''}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px;align-items:center">
+            <span class="${n.dodeljen?'assign-tag':'badge bn'}">${n.dodeljen||'Nije dodeljen'}</span>
+            ${n.lokacija?`<span class="loc-tag">📍 ${n.lokacija}</span>`:''}
+          </div>
           <div style="font-size:13px;color:#64748b;margin-bottom:4px">${n.zahtev}</div>
-          <div style="font-size:12px;color:#94a3b8">${n.datumKreiranja||''} ${rodg.length?'· '+rodg.length+' izveštaj':'· Čeka izveštaj'}</div>
+          <div style="font-size:12px;color:#94a3b8">${rCnt?rCnt+' izveštaj':'Čeka izveštaj'}</div>
           <div style="font-size:12px;color:#3b82f6;margin-top:4px;font-weight:500">Tapni za detalje →</div>
         </div>`;
       }).join('');
-  // Ponovo veži event listenere samo za listu
   container.querySelectorAll('[data-del]').forEach(el=>el.addEventListener('click',e=>{ e.stopPropagation(); obrisiNalog(el.dataset.del); }));
   container.querySelectorAll('[data-modal]').forEach(el=>el.addEventListener('click',()=>openModal(el.dataset.modal)));
 }
@@ -269,8 +290,8 @@ function getFilteredNalozi(){
     if(!statusOk)return false;
     if(!pretraga.trim())return true;
     const q=pretraga.toLowerCase();
-    const rodg=(odgovori[n.dodeljen]||[]).filter(o=>o.nalogId===n.id);
-    return (n.id||'').toLowerCase().includes(q)||(n.imeNaloga||'').toLowerCase().includes(q)||(n.zahtev||'').toLowerCase().includes(q)||(n.dodeljen||'').toLowerCase().includes(q)||(n.datumKreiranja||'').toLowerCase().includes(q)||rodg.some(o=>(o.opis||'').toLowerCase().includes(q)||(o.adresa||'').toLowerCase().includes(q)||(o.punoImeUredjaja||'').toLowerCase().includes(q)||(o.serijskiBroj||'').toLowerCase().includes(q)||(o.musterija||'').toLowerCase().includes(q));
+    const allR=[]; Object.values(odgovori).forEach(arr=>arr.forEach(o=>{ if(o.nalogId===n.id)allR.push(o); }));
+    return (n.imeNaloga||'').toLowerCase().includes(q)||(n.zahtev||'').toLowerCase().includes(q)||(n.dodeljen||'').toLowerCase().includes(q)||(n.lokacija||'').toLowerCase().includes(q)||allR.some(o=>(o.opis||'').toLowerCase().includes(q)||(o.adresa||'').toLowerCase().includes(q)||(o.musterija||'').toLowerCase().includes(q)||(o.serijskiBroj||'').toLowerCase().includes(q));
   });
 }
 
@@ -291,22 +312,16 @@ function bind(){
   }));
   document.querySelectorAll('[data-tab]').forEach(el=>el.addEventListener('click',()=>{ sefTab=el.dataset.tab; render(); }));
   document.querySelectorAll('[data-filter]').forEach(el=>el.addEventListener('click',()=>{ filterS=el.dataset.filter; render(); }));
-
-  // ── FIX: pretraga ne poziva render(), već samo ažurira listu ──
   const srch=document.getElementById('inp-pretraga');
-  if(srch){
-    srch.addEventListener('input',()=>{
-      pretraga=srch.value;
-      renderNaloziLista();
-    });
-  }
-
+  if(srch){ srch.addEventListener('input',()=>{ pretraga=srch.value; renderNaloziLista(); }); }
   const btnK=document.getElementById('btn-kreiraj'); if(btnK)btnK.addEventListener('click',kreirajNalog);
   document.querySelectorAll('[data-del]').forEach(el=>el.addEventListener('click',e=>{ e.stopPropagation(); obrisiNalog(el.dataset.del); }));
   document.querySelectorAll('[data-modal]').forEach(el=>el.addEventListener('click',()=>openModal(el.dataset.modal)));
   document.querySelectorAll('[data-open]').forEach(el=>el.addEventListener('click',()=>{ aktivni=nalozi.find(n=>n.id===el.dataset.open); slikeB64=[];forma=ef();sigMS=false;render(); }));
   const bb=document.getElementById('btn-back'); if(bb)bb.addEventListener('click',()=>{ if(aktivni){aktivni=null;forma=ef();slikeB64=[];sigMS=false;}else{screen='login';role=null;} render(); });
-  ['musterija','pomocniRadnik','uredjaj','serijskiBroj','punoImeUredjaja','datumMontaze','opis','adresa','napomena'].forEach(k=>{ const el=document.getElementById('f-'+k); if(el)el.addEventListener('input',()=>forma[k]=el.value); });
+  ['musterija','pomocniRadnik','uredjaj','serijskiBroj','punoImeUredjaja','datumOvere','opis','adresa','napomena'].forEach(k=>{
+    const el=document.getElementById('f-'+k); if(el)el.addEventListener('input',()=>forma[k]=el.value);
+  });
   const chkRow=document.getElementById('chk-row'); if(chkRow)chkRow.addEventListener('click',()=>{ forma.zavrsen=!forma.zavrsen; const box=document.getElementById('chk-box'); if(box){box.style.background=forma.zavrsen?'#22c55e':'transparent';box.style.borderColor=forma.zavrsen?'#22c55e':'#e2e8f0';box.textContent=forma.zavrsen?'✓':'';} chkRow.style.background=forma.zavrsen?'#dcfce7':'#f8fafc'; });
   const fi=document.getElementById('f-slike'); if(fi)fi.addEventListener('change',async e=>{ for(const f of Array.from(e.target.files)){ slikeB64.push(await resizeImg(f)); } renderSlikePreview(); });
   if(document.getElementById('sig-m-open')) initSig();
@@ -314,7 +329,6 @@ function bind(){
   const bs=document.getElementById('btn-sav-m');if(bs)bs.addEventListener('click',saveSig);
   const bp=document.getElementById('btn-pon-m');if(bp)bp.addEventListener('click',()=>{forma.potpis=null;sigMS=false;render();});
   const sub=document.getElementById('btn-submit'); if(sub)sub.addEventListener('click',submitForma);
-  // Lightbox za slike u formi
   document.querySelectorAll('.thumb-click').forEach(img=>img.addEventListener('click',()=>openLightbox(img.src)));
 }
 
@@ -350,21 +364,33 @@ function rLogin(){
 function rSef(){
   const ak=nalozi.filter(n=>n.status==='aktivan').length;
   const zv=nalozi.filter(n=>n.status==='zavrsen').length;
-  const prik = getFilteredNalozi();
+  // Preview of auto-generated name
+  const now=new Date();
+  const d=String(now.getDate()).padStart(2,'0');
+  const mo=String(now.getMonth()+1).padStart(2,'0');
+  const y=now.getFullYear();
+  const prefix=`RN:${d}-${mo}-${y}-`;
+  const todayCount=nalozi.filter(n=>(n.imeNaloga||'').startsWith(prefix)).length;
+  const nextName=prefix+(todayCount+1);
 
   const noviHtml=`
     <div class="card">
       <div class="sec" style="margin-top:0">Novi radni nalog</div>
-      <label class="lbl" style="margin-top:0">Ime radnog naloga</label>
-      <input id="inp-ime" placeholder="Npr. Servis klima uređaja...">
-      <div class="two-col" style="margin-top:14px">
-        <div>
-          <label class="lbl" style="margin-top:0">Datum kreiranja</label>
-          <input id="inp-datum" type="date" value="${new Date().toISOString().split('T')[0]}">
-        </div>
+      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 14px;margin-bottom:14px">
+        <div style="font-size:12px;color:#0369a1;margin-bottom:4px;font-weight:500">Automatski broj naloga</div>
+        <div class="rn-id" style="font-size:15px;padding:4px 10px">${nextName}</div>
+      </div>
+      <div class="two-col">
         <div>
           <label class="lbl" style="margin-top:0">Dodeli radniku</label>
-          <select id="inp-radnik">${RADNICI.map(r=>`<option>${r}</option>`).join('')}</select>
+          <select id="inp-radnik">
+            <option value="">— Nije dodeljen —</option>
+            ${RADNICI.map(r=>`<option>${r}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="lbl" style="margin-top:0">Lokacija</label>
+          <input id="inp-lokacija" placeholder="Grad, adresa...">
         </div>
       </div>
       <label class="lbl">Zahtev</label>
@@ -372,29 +398,30 @@ function rSef(){
       <button class="btn btn-blue" id="btn-kreiraj" style="margin-top:14px">Kreiraj nalog</button>
     </div>`;
 
+  const prik=getFilteredNalozi();
   const naloziHtml=`
     <div class="pills">
       ${['svi','aktivni','zavrseni'].map(f=>`<button class="pill ${filterS===f?'on':''}" data-filter="${f}">${f==='svi'?'Svi':f==='aktivni'?'Aktivni':'Završeni'}</button>`).join('')}
     </div>
-    <input id="inp-pretraga" value="${pretraga}" placeholder="🔍 Pretraži po nazivu, radniku, adresi..." style="margin-bottom:12px">
+    <input id="inp-pretraga" value="${pretraga}" placeholder="🔍 Pretraži..." style="margin-bottom:12px">
     <div id="nalozi-lista">
-      ${prik.length===0?`<div class="empty">${pretraga?'Nema rezultata za "'+pretraga+'"':'Nema naloga'}</div>`:
+      ${prik.length===0?`<div class="empty">${pretraga?'Nema rezultata':'Nema naloga'}</div>`:
       prik.map(n=>{
-        const rodg=(odgovori[n.dodeljen]||[]).filter(o=>o.nalogId===n.id);
+        let rCnt=0; Object.values(odgovori).forEach(arr=>arr.forEach(o=>{ if(o.nalogId===n.id)rCnt++; }));
         return`<div class="card nalog-card" style="border-left:3px solid ${n.status==='zavrsen'?'#22c55e':'#f59e0b'};cursor:pointer" data-modal="${n.id}">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div style="display:flex;gap:8px;align-items:center">
-              <span style="font-weight:600;font-size:13px;color:#1d4ed8">${n.id}</span>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
+            <span class="rn-id">${n.imeNaloga||n.id}</span>
+            <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
               <span class="badge ${n.status==='zavrsen'?'bg':'by'}">${n.status==='zavrsen'?'Završen':'Aktivan'}</span>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <span style="font-size:12px;color:#64748b">${n.dodeljen}</span>
               <button class="btn btn-red" data-del="${n.id}">✕</button>
             </div>
           </div>
-          <div style="font-weight:600;font-size:14px;margin:8px 0 2px">${n.imeNaloga||''}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px;align-items:center">
+            <span class="${n.dodeljen?'assign-tag':'badge bn'}">${n.dodeljen||'Nije dodeljen'}</span>
+            ${n.lokacija?`<span class="loc-tag">📍 ${n.lokacija}</span>`:''}
+          </div>
           <div style="font-size:13px;color:#64748b;margin-bottom:4px">${n.zahtev}</div>
-          <div style="font-size:12px;color:#94a3b8">${n.datumKreiranja||''} ${rodg.length?'· '+rodg.length+' izveštaj':'· Čeka izveštaj'}</div>
+          <div style="font-size:12px;color:#94a3b8">${rCnt?rCnt+' izveštaj':'Čeka izveštaj'}</div>
           <div style="font-size:12px;color:#3b82f6;margin-top:4px;font-weight:500">Tapni za detalje →</div>
         </div>`;
       }).join('')}
@@ -419,37 +446,41 @@ function rSef(){
 }
 
 function rRadnik(){
-  const moji=nalozi.filter(n=>n.dodeljen===role);
-  const akt=moji.filter(n=>n.status==='aktivan');
-  const zav=moji.filter(n=>n.status==='zavrsen');
+  const sviAktivni=nalozi.filter(n=>n.status==='aktivan');
+  const mojiZavrseni=nalozi.filter(n=>n.status==='zavrsen'&&(odgovori[role]||[]).some(o=>o.nalogId===n.id));
   return`<div>
     <div class="header" style="background:#0F6E56">
       <button class="back-btn" id="btn-back">←</button>
       <div>
         <div style="font-weight:600;font-size:16px">${role}</div>
-        <div style="font-size:12px;opacity:.85">${akt.length} aktivnih naloga</div>
+        <div style="font-size:12px;opacity:.85">${sviAktivni.length} aktivnih naloga</div>
       </div>
     </div>
     <div class="wrap">
-      ${moji.length===0?`<div class="empty">Nema dodeljenih naloga</div>`:''}
-      ${akt.length?`<div class="sec">Aktivni nalozi</div>${akt.map(n=>`
+      ${sviAktivni.length===0?`<div class="empty">Nema aktivnih naloga</div>`:''}
+      ${sviAktivni.length?`
+        <div class="sec">Aktivni nalozi — odaberi koji ćeš raditi</div>
+        ${sviAktivni.map(n=>`
         <div class="card nalog-card" style="border-left:3px solid #f59e0b;cursor:pointer" data-open="${n.id}">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-weight:600;font-size:13px;color:#1d4ed8">${n.id}</span>
-            <span class="badge by">Aktivan</span>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap">
+            <span class="rn-id">${n.imeNaloga||n.id}</span>
+            <div style="display:flex;gap:6px;align-items:center">
+              ${n.dodeljen?`<span class="assign-tag">${n.dodeljen}</span>`:`<span class="badge bn">Slobodan</span>`}
+              ${n.lokacija?`<span class="loc-tag">📍 ${n.lokacija}</span>`:''}
+            </div>
           </div>
-          <div style="font-weight:600;font-size:14px;margin:6px 0 2px">${n.imeNaloga||''}</div>
-          <p style="margin:0 0 6px;font-size:13px;color:#64748b">${n.zahtev}</p>
-          <div style="font-size:12px;color:#15803d;font-weight:500">Tapni da popuniš →</div>
+          <p style="margin:8px 0 6px;font-size:13px;color:#64748b">${n.zahtev}</p>
+          <div style="font-size:12px;color:#15803d;font-weight:500">Tapni da popuniš izveštaj →</div>
         </div>`).join('')}`:''}
-      ${zav.length?`<div class="sec" style="margin-top:8px">Završeni nalozi</div>${zav.map(n=>`
+      ${mojiZavrseni.length?`
+        <div class="sec" style="margin-top:8px">Moji završeni nalozi</div>
+        ${mojiZavrseni.map(n=>`
         <div class="card nalog-card" style="border-left:3px solid #22c55e;opacity:.7">
           <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-weight:600;font-size:13px;color:#1d4ed8">${n.id}</span>
+            <span class="rn-id">${n.imeNaloga||n.id}</span>
             <span class="badge bg">Završen</span>
           </div>
-          <div style="font-weight:600;font-size:14px;margin:6px 0 2px">${n.imeNaloga||''}</div>
-          <p style="margin:0;font-size:13px;color:#64748b">${n.zahtev}</p>
+          <p style="margin:6px 0 0;font-size:13px;color:#64748b">${n.zahtev}</p>
         </div>`).join('')}`:''}
     </div>
   </div>`;
@@ -464,20 +495,26 @@ function rForma(){
     <div class="header" style="background:#0F6E56">
       <button class="back-btn" id="btn-back">←</button>
       <div>
-        <div style="font-weight:600;font-size:16px">${aktivni.id} — ${aktivni.imeNaloga||''}</div>
-        <div style="font-size:12px;opacity:.85">Popuni izveštaj</div>
+        <div style="font-weight:700;font-size:14px;font-family:'Courier New',monospace;letter-spacing:.03em">${aktivni.imeNaloga||aktivni.id}</div>
+        <div style="font-size:12px;opacity:.85">Popuni izveštaj · ${role}</div>
       </div>
     </div>
     <div class="wrap">
       <div class="card" style="background:#eff6ff;border-color:#bfdbfe">
-        <div class="sec" style="color:#1d4ed8;margin-bottom:8px">Radni nalog</div>
-        <div class="info-row"><span class="info-label" style="color:#3b82f6">Broj:</span><b>${aktivni.id}</b></div>
-        <div class="info-row" style="margin-top:4px"><span class="info-label" style="color:#3b82f6">Ime naloga:</span><span>${aktivni.imeNaloga||''}</span></div>
-        <div class="info-row" style="margin-top:4px"><span class="info-label" style="color:#3b82f6">Datum:</span><span>${aktivni.datumKreiranja||''}</span></div>
+        <div class="sec" style="color:#1d4ed8;margin-bottom:8px">Podaci naloga</div>
+        <div class="info-row"><span class="info-label" style="color:#3b82f6">Broj naloga:</span><span class="rn-id">${aktivni.imeNaloga||aktivni.id}</span></div>
+        ${aktivni.dodeljen?`<div class="info-row" style="margin-top:4px"><span class="info-label" style="color:#3b82f6">Dodeljen:</span><span>${aktivni.dodeljen}</span></div>`:''}
+        ${aktivni.lokacija?`<div class="info-row" style="margin-top:4px"><span class="info-label" style="color:#3b82f6">Lokacija:</span><span>📍 ${aktivni.lokacija}</span></div>`:''}
         <div class="info-row" style="margin-top:4px"><span class="info-label" style="color:#3b82f6">Zahtev:</span><span>${aktivni.zahtev}</span></div>
       </div>
       <div class="card">
         <div class="sec" style="margin-top:0">Radnik popunjava</div>
+
+        <label class="lbl" style="margin-top:0">📅 Datum overe / predaje *</label>
+        <input id="f-datumOvere" type="date" value="${forma.datumOvere}" style="border-color:#93c5fd;background:#f0f9ff">
+
+        <div class="divider"></div>
+
         <label class="lbl" style="margin-top:0">Ime i prezime mušterije</label>
         <input id="f-musterija" value="${forma.musterija}" placeholder="Ime i prezime...">
         <label class="lbl">Pomoćni radnik</label>
@@ -488,8 +525,6 @@ function rForma(){
           <div><label class="lbl" style="margin-top:0">Uređaj</label><input id="f-uredjaj" value="${forma.uredjaj}" placeholder="Tip uređaja..."></div>
           <div><label class="lbl" style="margin-top:0">Serijski broj</label><input id="f-serijskiBroj" value="${forma.serijskiBroj}" placeholder="S/N..."></div>
         </div>
-        <label class="lbl">Datum montaže</label>
-        <input id="f-datumMontaze" type="date" value="${forma.datumMontaze}">
         <label class="lbl">Opis urađenog posla *</label>
         <textarea id="f-opis" rows="4" placeholder="Opiši šta si uradio...">${forma.opis}</textarea>
         <label class="lbl">Adresa</label>
