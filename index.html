@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>FRIGO-NIDZA</title>
+
+<!-- ✅ PWA -->
+<link rel="manifest" href="/app/manifest.json">
+<meta name="theme-color" content="#1158a8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Frigo Nidza">
+<link rel="apple-touch-icon" href="/app/icon-192.png">
+
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
@@ -162,19 +171,12 @@ async function getOAuthToken(){
 }
 async function sendPushToAll(title,body){
   try{
-    console.log('sendPushToAll pozvan:', title, body);
     const snap=await db.collection('fcm_tokeni').get();
-    console.log('Tokeni u bazi:', snap.size);
-    if(snap.empty){console.log('Nema tokena!');return;}
-    console.log('Uzimam OAuth token...');
+    if(snap.empty)return;
     const token=await getOAuthToken();
-    console.log('OAuth token dobijen:', token ? 'DA' : 'NE');
     for(const doc of snap.docs){
       const t=doc.data().token;if(!t)continue;
-      console.log('Šaljem push za:', doc.id);
-      const res=await fetch('https://fcm.googleapis.com/v1/projects/proba-9781f/messages:send',{method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({message:{token:t,notification:{title,body},android:{priority:'high',notification:{sound:'default',channel_id:'frigo_nalozi'}}}})});
-      const json=await res.json();
-      console.log('FCM odgovor:', JSON.stringify(json));
+      await fetch('https://fcm.googleapis.com/v1/projects/proba-9781f/messages:send',{method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({message:{token:t,notification:{title,body},android:{priority:'high',notification:{sound:'default',channel_id:'frigo_nalozi'}}}})});
     }
   }catch(e){console.error('Push greška:',e);}
 }
@@ -185,14 +187,18 @@ async function initMessaging(radnik){
     if(perm!=='granted')return;
     const reg=await navigator.serviceWorker.register('/app/firebase-messaging-sw.js');
     const messaging=firebase.messaging();
-    messaging.onMessage(payload=>{new Notification(payload.notification?.title||'FRIGO-NIDŽA',{body:payload.notification?.body,icon:'/logo.png'});});
+    messaging.onMessage(payload=>{new Notification(payload.notification?.title||'FRIGO-NIDŽA',{body:payload.notification?.body,icon:'/app/icon-192.png'});});
     const t=await messaging.getToken({vapidKey:VAPID_KEY,serviceWorkerRegistration:reg});
     if(t){
-      // Sačuvaj token kao poseban dokument — ID je hash tokena da nema duplikata
       const tokenId=btoa(t).replace(/[^a-zA-Z0-9]/g,'').substring(0,20);
       await db.collection('fcm_tokeni').doc(tokenId).set({token:t,radnik,ts:firebase.firestore.FieldValue.serverTimestamp()});
     }
   }catch(e){console.warn('Messaging init:',e);}
+}
+
+// ✅ PWA Service Worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/app/sw.js').catch(e=>console.warn('SW:',e));
 }
 // ─────────────────────────────────────────────────────────────
 
