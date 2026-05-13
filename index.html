@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1158a8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FrigoNidža">
 <title>FRIGO-NIDZA</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -131,6 +135,80 @@ canvas{display:block;width:100%;height:130px}
 </div>
 
 <script>
+// ── PWA Setup (Manifest + Service Worker + Ikonica) ───────────
+(function(){
+  // 1. Napravi ikonicu pomoću canvas-a (FRIGO logo stil)
+  function makeIcon(sz){
+    const cv=document.createElement('canvas');cv.width=sz;cv.height=sz;
+    const c=cv.getContext('2d');
+    // Pozadina — tamno plava elipsa (kao logo)
+    const g=c.createRadialGradient(sz*.42,sz*.32,0,sz*.5,sz*.5,sz*.7);
+    g.addColorStop(0,'#6ec6f5');g.addColorStop(.3,'#2a8fd4');
+    g.addColorStop(.7,'#1060b8');g.addColorStop(1,'#08348a');
+    c.fillStyle='#041e6a';
+    c.beginPath();c.roundRect(0,0,sz,sz,sz*.18);c.fill();
+    c.fillStyle=g;
+    c.beginPath();c.roundRect(4,4,sz-8,sz-8,sz*.15);c.fill();
+    // Sjaj (highlight)
+    c.fillStyle='rgba(255,255,255,0.13)';
+    c.beginPath();c.ellipse(sz*.42,sz*.3,sz*.38,sz*.18,0,0,Math.PI*2);c.fill();
+    // Tekst FRIGO
+    c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';
+    c.font=`900 ${sz*.28}px 'Arial Black',Arial`;
+    c.shadowColor='#0a3a8a';c.shadowBlur=4;
+    c.fillText('FRIGO',sz/2,sz*.38);
+    // Tekst NIDŽA
+    c.font=`900 ${sz*.22}px 'Arial Black',Arial`;
+    c.fillText('NIDŽA',sz/2,sz*.68);
+    c.shadowBlur=0;
+    return cv.toDataURL('image/png');
+  }
+
+  const icon192=makeIcon(192);
+  const icon512=makeIcon(512);
+
+  // Apple touch icon
+  const appleLink=document.createElement('link');
+  appleLink.rel='apple-touch-icon';appleLink.href=icon192;
+  document.head.appendChild(appleLink);
+
+  // 2. Manifest kao Blob URL
+  const mf={
+    name:'FRIGO-NIDŽA',short_name:'FrigoNidža',
+    start_url:window.location.href,
+    display:'standalone',
+    background_color:'#0d1117',theme_color:'#1158a8',
+    icons:[
+      {src:icon192,sizes:'192x192',type:'image/png',purpose:'any maskable'},
+      {src:icon512,sizes:'512x512',type:'image/png',purpose:'any maskable'}
+    ]
+  };
+  const mBlob=new Blob([JSON.stringify(mf)],{type:'application/manifest+json'});
+  const mUrl=URL.createObjectURL(mBlob);
+  const mLink=document.createElement('link');mLink.rel='manifest';mLink.href=mUrl;
+  document.head.appendChild(mLink);
+
+  // 3. Service Worker kao Blob URL
+  if('serviceWorker' in navigator){
+    const swCode=`
+      const CACHE='frigo-v1';
+      self.addEventListener('install',e=>{self.skipWaiting();});
+      self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim());});
+      self.addEventListener('fetch',e=>{
+        e.respondWith(
+          fetch(e.request).catch(()=>
+            caches.match(e.request).then(r=>r||new Response('Offline',{status:503}))
+          )
+        );
+      });
+    `;
+    const swBlob=new Blob([swCode],{type:'application/javascript'});
+    const swUrl=URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swUrl).catch(()=>{});
+  }
+})();
+// ─────────────────────────────────────────────────────────────
+
 firebase.initializeApp({
   apiKey:"AIzaSyDOVltUVCGUz3XtZq4sdjtRbMG7sSp9bM8",
   authDomain:"proba-9781f.firebaseapp.com",
@@ -188,7 +266,6 @@ async function initMessaging(radnik){
     messaging.onMessage(payload=>{new Notification(payload.notification?.title||'FRIGO-NIDŽA',{body:payload.notification?.body,icon:'/logo.png'});});
     const t=await messaging.getToken({vapidKey:VAPID_KEY,serviceWorkerRegistration:reg});
     if(t){
-      // Sačuvaj token kao poseban dokument — ID je hash tokena da nema duplikata
       const tokenId=btoa(t).replace(/[^a-zA-Z0-9]/g,'').substring(0,20);
       await db.collection('fcm_tokeni').doc(tokenId).set({token:t,radnik,ts:firebase.firestore.FieldValue.serverTimestamp()});
     }
@@ -646,7 +723,7 @@ function rRadnik(){
           <div style="display:flex;justify-content:space-between;align-items:center">
             <span class="rn-id">${n.imeNaloga||n.id}</span><span class="badge bg">Završen</span>
           </div>
-          <p style="margin:6px 0 0;font-size:13px;color:var(--text2)">${n.zahtev}</p>
+          <p style="margin:6px 0 0;font-size:13px;color:var(--text2)">${n.zahtev}</span>
         </div>`).join('')}`:''}
     </div>
   </div>`;
