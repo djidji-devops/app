@@ -204,6 +204,7 @@ if('serviceWorker' in navigator){
 
 const RADNICI = ['Luka', 'Nikola', 'Nemanja'];
 const PINS = {
+  sef: '2121',
   Luka: '5852',
   Nikola: '6456',
   Nemanja: '6362'
@@ -228,10 +229,23 @@ function pinPress(v){
   if(pinVal.length===4) setTimeout(checkPin,120);
 }
 async function checkPin(){
-  if(pinVal===PINS[pinTarget]){
-    closePin(); role=pinTarget; screen='radnik';
-    document.getElementById('app').innerHTML='<div class="loading"><div class="spinner"></div><span style="color:var(--text2)">Učitavanje...</span></div>';
-    await loadAll(); initMessaging(role); render();
+  if (pinVal === PINS[pinTarget]) {
+    closePin();
+
+    role = pinTarget;
+    screen = (pinTarget === 'sef') ? 'sef' : 'radnik';
+
+    document.getElementById('app').innerHTML =
+      '<div class="loading"><div class="spinner"></div><span style="color:var(--text2)">Učitavanje.</span></div>';
+
+    await loadAll();
+
+    if (role !== 'sef') {
+      initMessaging(role);
+    }
+
+    render();
+}
   } else {
     document.getElementById('pin-err').textContent='Pogrešan PIN — pokušaj ponovo';
     pinVal=''; document.getElementById('pin-display').textContent='○○○○';
@@ -508,7 +522,10 @@ function render(){
 function bind(){
   document.querySelectorAll('[data-role]').forEach(el=>el.addEventListener('click',async()=>{
     const r=el.dataset.role;
-    if(PINS[r]){showPin(r);return;}
+    if (r === 'sef' || PINS[r]) {
+    showPin(r);
+    return;
+}
     role=r;screen=role==='sef'?'sef':'radnik';
     document.getElementById('app').innerHTML='<div class="loading"><div class="spinner"></div><span style="color:var(--text2)">Učitavanje...</span></div>';
     await loadAll();
