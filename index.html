@@ -230,7 +230,10 @@ function pinPress(v){
 }
 async function checkPin(){
   if(pinVal===PINS[pinTarget]){
-    closePin(); role=pinTarget; screen=(pinTarget==='sef'?'sef':'radnik');
+    const ulogovan = pinTarget;
+    closePin();
+    role = ulogovan;
+    screen = (ulogovan === 'sef' ? 'sef' : 'radnik');
     document.getElementById('app').innerHTML='<div class="loading"><div class="spinner"></div><span style="color:var(--text2)">Učitavanje...</span></div>';
     await loadAll();
     if(role!=='sef') initMessaging(role);
