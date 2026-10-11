@@ -198,7 +198,18 @@ async function initMessaging(radnik){
 
 // ✅ PWA Service Worker
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/app/sw.js').catch(e=>console.warn('SW:',e));
+  const hadController=!!navigator.serviceWorker.controller;
+  let reloading=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(!hadController||reloading)return;
+    if(typeof aktivni!=='undefined'&&aktivni){toast('Nova verzija spremna — osveži posle slanja izveštaja');return;}
+    reloading=true;location.reload();
+  });
+  navigator.serviceWorker.register('/app/sw.js',{updateViaCache:'none'}).then(reg=>{
+    reg.update();
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)reg.update();});
+    setInterval(()=>reg.update(),30*60*1000);
+  }).catch(e=>console.warn('SW:',e));
 }
 // ─────────────────────────────────────────────────────────────
 
